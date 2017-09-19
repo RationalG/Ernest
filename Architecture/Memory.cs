@@ -20,7 +20,7 @@ namespace Ernest
 
         private byte[] _RAM;
 
-        public byte this[uint address]
+        public byte this[ushort address]
         {
             get => MmioRead(address);
             set => MmioWrite(address, value);
@@ -40,23 +40,24 @@ namespace Ernest
             }
         }
 
-        private byte MmioRead(uint address)
+        private byte MmioRead(ushort address)
         {
-            switch(address)
+            switch (address)
             {
-                case uint addr when (addr >= 0 && addr <= 0x2001 || addr >= 0x2003 && addr <= 0x10000) :
+                case ushort addr when (addr >= 0 && addr <= 0x2001 || addr >= 0x2003 && addr <= 0xFFFF):
                     return _RAM[addr];
-                case uint addr when (addr == 0x2002) :
+                case ushort addr when (addr == 0x2002):
                     //TODO Read PPU status
                     return default(byte);
-                default :
-                    return default(byte);          
+                default:
+                    return default(byte);
             }
+         
         }
 
-        public ushort MmioReadShort(uint address)
+        public ushort MmioReadShort(ushort address)
         {
-            return (ushort)(MmioRead(address) | (MmioRead(address + 1) << 8));
+            return (ushort)(MmioRead(address) | (MmioRead((ushort)(address + 1)) << 8));
         }
 
         private void MmioWrite(uint address, byte value)
