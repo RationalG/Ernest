@@ -1,4 +1,5 @@
 ﻿using Ernest.Attributes;
+using Ernest.Common;
 using Ernest.Extensions;
 using System;
 using System.Collections;
@@ -43,7 +44,7 @@ namespace Ernest
         /// <summary>
         /// Status register.
         /// </summary>
-        BitArray S = new BitArray(8);
+        BitArray S = new BitArray(8, false);
 
         /// <summary>
         /// Accumulator register.
@@ -66,14 +67,14 @@ namespace Ernest
         /// Used for easy implementation of ADC and SBC
         /// </summary>
         /// <param name="mv">Memory held value</param>
-        void CrossAdcSbc(byte mv)
+        byte CrossAdcSbc(byte mv)
         {
             var carry = (this.S.Get((int)StatusRegisterFlag.C)) ? 1 : 0;
             var sum = this.A + mv + carry;
             this.S.Set((int)StatusRegisterFlag.C, sum > 0xFF);
-            this.S.Set((int)StatusRegisterFlag.Z, sum == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (sum & 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((sum >> 7) & 1) == 1);
             this.S.Set((int)StatusRegisterFlag.V, (~(this.A ^ mv) & (this.A ^ sum) & 0x80) == 0x80);
+            return (byte)sum;
         }
 
         [Opcode(0x18)]
@@ -147,7 +148,7 @@ namespace Ernest
         {
             this.A = this.X;
             this.S.Set((int)StatusRegisterFlag.Z, this.A == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.A | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.A >> 7) & 1) == 1);
         }
 
         [Opcode(0x98)]
@@ -155,7 +156,7 @@ namespace Ernest
         {
             this.A = this.Y;
             this.S.Set((int)StatusRegisterFlag.Z, this.A == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.A | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.A >> 7) & 1) == 1);
         }
 
 
@@ -164,7 +165,7 @@ namespace Ernest
         {
             this.X = this.A;
             this.S.Set((int)StatusRegisterFlag.Z, this.X == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.X | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.X >> 7) & 1) == 1);
         }
 
         [Opcode(0xA8)]
@@ -172,7 +173,7 @@ namespace Ernest
         {
             this.Y = this.A;
             this.S.Set((int)StatusRegisterFlag.Z, this.Y == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.Y | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.Y >> 7) & 1) == 1);
         }
 
 
@@ -182,7 +183,7 @@ namespace Ernest
             this.A = (addressingResult.am == AddressingMode.Immediate) ?
                 (byte)addressingResult.extract : Memory.Access[addressingResult.extract];
             this.S.Set((int)StatusRegisterFlag.Z, this.A == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.A | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.A >> 7) & 1) == 1);
         }
 
         [Opcode(0xA2, 0xA6, 0xB6, 0xAE, 0xBE)]
@@ -191,7 +192,7 @@ namespace Ernest
             this.X = (addressingResult.am == AddressingMode.Immediate) ?
                 (byte)addressingResult.extract : Memory.Access[addressingResult.extract];
             this.S.Set((int)StatusRegisterFlag.Z, this.X == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.X | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.X >> 7) & 1) == 1);
         }
 
         [Opcode(0xA0, 0xA4, 0xB4, 0xAC, 0xBC)]
@@ -200,7 +201,7 @@ namespace Ernest
             this.Y = (addressingResult.am == AddressingMode.Immediate) ?
                 (byte)addressingResult.extract : Memory.Access[addressingResult.extract];
             this.S.Set((int)StatusRegisterFlag.Z, this.Y == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.Y | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.Y >> 7) & 1) == 1);
         }
 
         [Opcode(0xC6, 0xD6, 0xCE, 0xDE)]
@@ -209,7 +210,7 @@ namespace Ernest
             int value = Memory.Access[addressingResult.extract] - 1;
             Memory.Access[addressingResult.extract] = (byte)value;
             this.S.Set((int)StatusRegisterFlag.Z, value == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (value | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((value >> 7) & 1) == 1);
         }
 
         [Opcode(0xCA)]
@@ -217,7 +218,7 @@ namespace Ernest
         {
             this.X--;
             this.S.Set((int)StatusRegisterFlag.Z, this.X == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.X | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.X >> 7) & 1) == 1);
         }
 
         [Opcode(0x88)]
@@ -225,24 +226,24 @@ namespace Ernest
         {
             this.Y--;
             this.S.Set((int)StatusRegisterFlag.Z, this.Y == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.Y | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.Y >> 7) & 1) == 1);
         }
 
         [Opcode(0xE6, 0xF6, 0xEE, 0xFE)]
         void Inc((ushort extract, AddressingMode am) addressingResult)
         {
-            int value = Memory.Access[addressingResult.extract] + 1;
+            int value = Memory.Access[addressingResult.extract] + 1 & 0xFF;
             Memory.Access[addressingResult.extract] = (byte)value;
             this.S.Set((int)StatusRegisterFlag.Z, value == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (value | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((value >> 7) & 1) == 1);
         }
 
         [Opcode(0xE8)]
         void Inx((ushort extract, AddressingMode am) addressingResult)
         {
             this.X++;
-            this.S.Set((int)StatusRegisterFlag.Z, (this.X == 0) ? true : false);
-            this.S.Set((int)StatusRegisterFlag.S, ((this.X | 0x80) == 0x80) ? true : false);
+            this.S.Set((int)StatusRegisterFlag.Z, this.X == 0);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.X >> 7) & 1) == 1);
         }
 
         [Opcode(0xC8)]
@@ -250,50 +251,58 @@ namespace Ernest
         {
             this.Y++;
             this.S.Set((int)StatusRegisterFlag.Z, this.Y == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.Y | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.Y >> 7) & 1) == 1);
         }
 
         [Opcode(0x49, 0x45, 0x55, 0x4D, 0x5D, 0x59, 0x41, 0x51)]
         void Eor((ushort extract, AddressingMode am) addressingResult)
         {
-            this.A ^= Memory.Access[addressingResult.extract];
+            this.A ^= ((addressingResult.am == AddressingMode.Immediate) ?
+                (byte)addressingResult.extract : Memory.Access[addressingResult.extract]);
             this.S.Set((int)StatusRegisterFlag.Z, this.A == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.A | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.A >> 7) & 1) == 1);
         }
 
         [Opcode(0x09, 0x05, 0x15, 0x0D, 0x1D, 0x19, 0x01, 0x11)]
         void Ora((ushort extract, AddressingMode am) addressingResult)
         {
-            this.A |= Memory.Access[addressingResult.extract];
+            this.A |= ((addressingResult.am == AddressingMode.Immediate) ?
+                (byte)addressingResult.extract : Memory.Access[addressingResult.extract]);
             this.S.Set((int)StatusRegisterFlag.Z, this.A == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.A | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.A >> 7) & 1) == 1);
         }
 
         [Opcode(0xE0, 0xE4, 0xEC)]
         void Cpx((ushort extract, AddressingMode am) addressingResult)
         {
-            var value = this.X - Memory.Access[addressingResult.extract];
-            this.S.Set((int)StatusRegisterFlag.C, this.X >= value);
-            this.S.Set((int)StatusRegisterFlag.Z, this.X == value);
-            this.S.Set((int)StatusRegisterFlag.S, (value | 0x80) == 0x80);
+            var operand = (addressingResult.am == AddressingMode.Immediate) ? 
+                addressingResult.extract : Memory.Access[addressingResult.extract];
+            var comparison = this.X - operand;
+            this.S.Set((int)StatusRegisterFlag.C, this.X >= operand);
+            this.S.Set((int)StatusRegisterFlag.Z, comparison == 0);
+            this.S.Set((int)StatusRegisterFlag.S, ((comparison >> 7) & 1) == 1);
         }
 
         [Opcode(0xC0, 0xC4, 0xCC)]
         void Cpy((ushort extract, AddressingMode am) addressingResult)
         {
-            var value = this.Y - Memory.Access[addressingResult.extract];
-            this.S.Set((int)StatusRegisterFlag.C, this.Y >= value);
-            this.S.Set((int)StatusRegisterFlag.Z, this.Y == value);
-            this.S.Set((int)StatusRegisterFlag.S, (value | 0x80) == 0x80);
+            var operand = (addressingResult.am == AddressingMode.Immediate) ?
+                addressingResult.extract : Memory.Access[addressingResult.extract];
+            var comparison = this.Y - operand;
+            this.S.Set((int)StatusRegisterFlag.C, this.Y >= operand);
+            this.S.Set((int)StatusRegisterFlag.Z, comparison == 0);
+            this.S.Set((int)StatusRegisterFlag.S, ((comparison >> 7) & 1) == 1);
         }
 
         [Opcode(0xC9, 0xC5, 0xD5, 0xCD, 0xDD, 0xD9, 0xC1, 0xD1)]
         void Cmp((ushort extract, AddressingMode am) addressingResult)
         {
-            var value = this.A - Memory.Access[addressingResult.extract];
-            this.S.Set((int)StatusRegisterFlag.C, this.A >= value);
-            this.S.Set((int)StatusRegisterFlag.Z, this.A == value);
-            this.S.Set((int)StatusRegisterFlag.S, (value | 0x80) == 0x80);
+            var mv = ((addressingResult.am == AddressingMode.Immediate) ? 
+                addressingResult.extract : Memory.Access[addressingResult.extract]);
+            var comparison = this.A - mv;
+            this.S.Set((int)StatusRegisterFlag.C, this.A >= mv);
+            this.S.Set((int)StatusRegisterFlag.Z, comparison == 0);
+            this.S.Set((int)StatusRegisterFlag.S, ((comparison >> 7) & 1) == 1);
         }
 
         [Opcode(0xEA)]
@@ -305,9 +314,10 @@ namespace Ernest
         [Opcode(0x29, 0x25, 0x35, 0x2D, 0x3D, 0x39, 0x21, 0x31)]
         void And((ushort extract, AddressingMode am) addressingResult)
         {
-            this.A &= Memory.Access[addressingResult.extract];
+            this.A &= (addressingResult.am == AddressingMode.Immediate) ?
+                (byte)addressingResult.extract : Memory.Access[addressingResult.extract];
             this.S.Set((int)StatusRegisterFlag.Z, this.A == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.A| 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.A >> 7) & 1) == 1);
         }
 
 
@@ -371,58 +381,63 @@ namespace Ernest
         [Opcode(0x69, 0x65, 0x75, 0x6D, 0x7D, 0x79, 0x61, 0x71)]
         void Adc((ushort extract, AddressingMode am) addressingResult)
         {
-            var mv = Memory.Access[addressingResult.extract];
-            CrossAdcSbc(mv);
+            var mv = ((addressingResult.am == AddressingMode.Immediate) ?
+                (byte)addressingResult.extract : Memory.Access[addressingResult.extract]);
+            this.A = CrossAdcSbc(mv);
+            this.S.Set((int)StatusRegisterFlag.Z, this.A == 0);
         }
 
         [Opcode(0xE9, 0xE5, 0xF5, 0xED, 0xFD, 0xF9, 0xE1, 0xF1)]
         void Sbc((ushort extract, AddressingMode am) addressingResult)
         {
-            var mv = Memory.Access[addressingResult.extract];
-            CrossAdcSbc((byte)(~mv));
+            var mv = ((addressingResult.am == AddressingMode.Immediate) ?
+                (byte)addressingResult.extract : Memory.Access[addressingResult.extract]);
+            this.A = CrossAdcSbc((byte)(~mv));
+            this.S.Set((int)StatusRegisterFlag.Z, this.A == 0);
         }
 
         [Opcode(0xBA)]
         void Tsx((ushort extract, AddressingMode am) addressingResult)
         {
-            this.X = Memory.Access[this.SP];
+            this.X = (byte)this.SP;
             this.S.Set((int)StatusRegisterFlag.Z, this.X == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.X | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.X >> 7) & 1) == 1);
         }
 
         [Opcode(0x9A)]
         void Txs((ushort extract, AddressingMode am) addressingResult)
         {
-            Memory.Access[this.SP] = this.X;
+            this.SP = (ushort)(0x100 + this.X);
         }
 
         [Opcode(0x48)]
         void Pha((ushort extract, AddressingMode am) addressingResult)
         {
-            Memory.Access[this.SP] = this.A;
-            this.SP--;
+            Memory.Access[this.SP--] = this.A;
         }
 
         [Opcode(0x08)]
         void Php((ushort extract, AddressingMode am) addressingResult)
         {
-            Memory.Access[this.SP] = this.S.ConvertToByte();
-            this.SP--;
+            this.S.Set((int)StatusRegisterFlag.B, true);
+            Memory.Access[this.SP--] = this.S.ConvertToByte();
+            this.S.Set((int)StatusRegisterFlag.B, false);
         }
 
         [Opcode(0x68)]
         void Pla((ushort extract, AddressingMode am) addressingResult)
         {
-            this.A = Memory.Access[this.SP];
-            this.SP++;
+            this.A = Memory.Access[++this.SP];
             this.S.Set((int)StatusRegisterFlag.Z, this.A == 0);
-            this.S.Set((int)StatusRegisterFlag.S, (this.A | 0x80) == 0x80);
+            this.S.Set((int)StatusRegisterFlag.S, ((this.A >> 7) & 1) == 1);
         }
 
         [Opcode(0x28)]
         void Plp((ushort extract, AddressingMode am) addressingResult)
         {
-            this.S = new BitArray(Memory.Access[this.SP]);
+            this.S = new BitArray(new byte[] { Memory.Access[++this.SP] });
+            this.S.Set((int)StatusRegisterFlag.B, false);
+            this.S.Set((int)StatusRegisterFlag.U, true);
         }
 
 
@@ -449,9 +464,12 @@ namespace Ernest
         [Opcode(0x40)]
         void Rti((ushort extract, AddressingMode am) addressingResult)
         {
-            this.S = new BitArray(Memory.Access[this.SP++]);
-            var high = Memory.Access[this.SP++];
-            var low = Memory.Access[this.SP++];
+            this.S = new BitArray(new byte[] { Memory.Access[++this.SP] });
+            this.S.Set((int)StatusRegisterFlag.B, false);
+            this.S.Set((int)StatusRegisterFlag.U, true);
+
+            var low = Memory.Access[++this.SP];
+            var high = Memory.Access[++this.SP];
             var address = (high << 8) | low;
             this.PC = (ushort)address;
         }
@@ -459,10 +477,10 @@ namespace Ernest
         [Opcode(0x60)]
         void Rts((ushort extract, AddressingMode am) addressingResult)
         {
-            var high = Memory.Access[this.SP++];
-            var low = Memory.Access[this.SP++];
-            var address = ((high << 8) | low) - 1;
-            this.PC = (ushort)address;
+            var low = Memory.Access[++this.SP];
+            var high = Memory.Access[++this.SP];
+            var address = ((high << 8) | low);
+            this.PC = (ushort)(address + 1);
         }
 
         [Opcode(0x0A, 0x06, 0x16, 0x0E, 0x1E)]
@@ -492,11 +510,12 @@ namespace Ernest
         [Opcode(0x2A, 0x26, 0x36, 0x2E, 0x3E)]
         void Rol((ushort extract, AddressingMode am) addressingResult)
         {
+            bool carry = this.S.Get((int)StatusRegisterFlag.C);
             if (addressingResult.am == AddressingMode.Accumulator)
             {
                 this.S.Set((int)StatusRegisterFlag.C, ((this.A >> 7) & 1) == 1);
                 this.A <<= 1;
-                this.A ^= (byte)((-0 ^ this.A) & (1 << 0));
+                this.A |= (byte)(carry ? 1 : 0);
                 this.S.Set((int)StatusRegisterFlag.Z, this.A == 0);
                 this.S.Set((int)StatusRegisterFlag.S, ((this.A >> 7) & 1) == 1);
             }
@@ -505,7 +524,7 @@ namespace Ernest
                 byte mv = Memory.Access[addressingResult.extract];
                 this.S.Set((int)StatusRegisterFlag.C, ((mv >> 7) & 1) == 1);
                 mv <<= 1;
-                mv |= (byte)(this.S.Get((int)StatusRegisterFlag.C) ? 1 : 0);
+                mv |= (byte)(carry ? 1 : 0);
                 this.S.Set((int)StatusRegisterFlag.Z, mv == 0);
                 this.S.Set((int)StatusRegisterFlag.S, ((mv >> 7) & 1) == 1);
                 Memory.Access[addressingResult.extract] = mv;
@@ -515,20 +534,21 @@ namespace Ernest
         [Opcode(0x6A, 0x66, 0x76, 0x6E, 0x7E)]
         void Ror((ushort extract, AddressingMode am) addressingResult)
         {
+            bool carry = this.S.Get((int)StatusRegisterFlag.C);
             if (addressingResult.am == AddressingMode.Accumulator)
             {
-                this.S.Set((int)StatusRegisterFlag.C, ((this.A >> 7) & 1) == 1);
+                this.S.Set((int)StatusRegisterFlag.C, ((this.A >> 0) & 1) == 1);
                 this.A >>= 1;
-                this.A |= (byte)(this.S.Get((int)StatusRegisterFlag.C) ? 1 : 0);
+                this.A |= (byte)(carry ? 0x80 : 0);
                 this.S.Set((int)StatusRegisterFlag.Z, this.A == 0);
                 this.S.Set((int)StatusRegisterFlag.S, ((this.A >> 7) & 1) == 1);
             }
             else
             {
                 byte mv = Memory.Access[addressingResult.extract];
-                this.S.Set((int)StatusRegisterFlag.C, ((mv >> 7) & 1) == 1);
+                this.S.Set((int)StatusRegisterFlag.C, ((mv >> 0) & 1) == 1);
                 mv >>= 1;
-                mv |= (byte)(this.S.Get((int)StatusRegisterFlag.C) ? 1 : 0);
+                mv |= (byte)(carry ? 0x80 : 0);
                 this.S.Set((int)StatusRegisterFlag.Z, mv == 0);
                 this.S.Set((int)StatusRegisterFlag.S, ((mv >> 7) & 1) == 1);
                 Memory.Access[addressingResult.extract] = mv;
@@ -540,8 +560,8 @@ namespace Ernest
         void Jsr((ushort extract, AddressingMode am) addressingResult)
         {
             ushort address = (ushort)(PC - 1);
-            Memory.Access[this.SP--] = (byte)(address & 0xFF);
             Memory.Access[this.SP--] = (byte)((address >> 8) & 0xFF);
+            Memory.Access[this.SP--] = (byte)(address & 0xFF);
             this.PC = addressingResult.extract;
         }
 
@@ -551,7 +571,7 @@ namespace Ernest
         {
             if (addressingResult.am == AddressingMode.Accumulator)
             {
-                this.S.Set((int)StatusRegisterFlag.C, ((this.A >> 1) & 1) == 1);
+                this.S.Set((int)StatusRegisterFlag.C, ((this.A >> 0) & 1) == 1);
                 this.A >>= 1;
                 this.S.Set((int)StatusRegisterFlag.Z, this.A == 0);
                 this.S.Set((int)StatusRegisterFlag.S, ((this.A >> 7) & 1) == 1);
@@ -559,7 +579,7 @@ namespace Ernest
             else
             {
                 var mv = Memory.Access[addressingResult.extract];
-                this.S.Set((int)StatusRegisterFlag.C, ((mv >> 1) & 1) == 1);
+                this.S.Set((int)StatusRegisterFlag.C, ((mv >> 0) & 1) == 1);
                 mv >>= 1;
                 this.S.Set((int)StatusRegisterFlag.Z, mv == 0);
                 this.S.Set((int)StatusRegisterFlag.S, ((mv >> 7) & 1) == 1);
@@ -575,8 +595,8 @@ namespace Ernest
             ZeroPageIndexedX,
             ZeroPageIndexedY,
             Indirect,
-            IndirectIndexedX,
-            IndirectIndexedY,
+            IndexedIndirect,
+            IndirectIndexed,
             Absolute,
             AbsoluteIndexedX,
             AbsoluteIndexedY,
@@ -591,6 +611,9 @@ namespace Ernest
         {
             var mv = Memory.Access[(ushort)(this.PC + 1)];
             this.PC += 2;
+#if DEBUG
+            Debugger.Out.PrintZeroPage(mv, Memory.Access[mv]);
+#endif
             return (extract: mv, addressingMode: AddressingMode.ZeroPage);
         }
         
@@ -617,6 +640,9 @@ namespace Ernest
         {
             var mv = Memory.Access.MmioReadShort((ushort)(this.PC + 1));
             this.PC += 3;
+#if DEBUG
+            Debugger.Out.PrintAbsolute(mv, Memory.Access[mv]);
+#endif
             return (extract: mv, addressingMode: AddressingMode.Absolute);
         }
 
@@ -647,28 +673,40 @@ namespace Ernest
         }
 
         [Opcode(0x01, 0x21, 0x41, 0x61, 0x81, 0xA1, 0xC1, 0xE1)]
-        (ushort extract, AddressingMode addressingMode) IndirectIndexedX()
+        (ushort extract, AddressingMode addressingMode) IndexedIndirect()
         {
             var mv = Memory.Access[(ushort)(this.PC + 1)];
             mv += this.X;
             this.PC += 2;
-            return (extract: mv, addressingMode: AddressingMode.IndirectIndexedX);
+
+            var indirectMemoryAddress = Memory.Access.MmioWrapReadShort(mv);
+#if DEBUG
+            Debugger.Out.PrintIndexedIndirect((byte)(mv - this.X), mv, indirectMemoryAddress, Memory.Access[indirectMemoryAddress]);
+#endif
+            return (extract: indirectMemoryAddress, addressingMode: AddressingMode.IndexedIndirect);
         }
 
         [Opcode(0x11, 0x31, 0x51, 0x71, 0x91, 0xB1, 0xD1, 0xF1)]
-        (ushort extract, AddressingMode addressingMode) IndirectIndexedY()
+        (ushort extract, AddressingMode addressingMode) IndirectIndexed()
         {
-            var mv = Memory.Access[(ushort)(this.PC + 1)];
-            mv += this.Y;
+            byte mv = Memory.Access[(ushort)(this.PC + 1)];
             this.PC += 2;
-            return (extract: mv, addressingMode: AddressingMode.IndirectIndexedY);
+
+            var indirectMemoryAddress = (ushort)((Memory.Access.MmioReadShort(mv) + this.Y) & 0xFFFF);
+#if DEBUG
+            Debugger.Out.PrintIndirectIndexed((byte)(mv - this.Y), mv, indirectMemoryAddress, Memory.Access[indirectMemoryAddress]);
+#endif
+            return (extract: indirectMemoryAddress, addressingMode: AddressingMode.IndirectIndexed);
         }
 
         [Opcode(0x10, 0x30, 0x50, 0x70, 0x90, 0xB0, 0xD0, 0xF0)]
         (ushort extract, AddressingMode addressingMode) Relative()
         {
-            var mv = Memory.Access[(ushort)(this.PC + 1)];
+            byte mv = Memory.Access[(ushort)(this.PC + 1)];
             this.PC += 2;
+#if DEBUG
+            Debugger.Out.PrintRelative(mv, (ushort)(this.PC + mv));
+#endif
             return (extract: mv, addressingMode: AddressingMode.Relative);
         }
 
@@ -676,6 +714,9 @@ namespace Ernest
         (ushort extract, AddressingMode addressingMode) Accumulator()
         {
             this.PC += 1;
+#if DEBUG
+            Debugger.Out.PrintAccumulator();
+#endif
             return (extract: default(ushort), addressingMode: AddressingMode.Accumulator);
         }
 
@@ -683,14 +724,20 @@ namespace Ernest
         (ushort extract, AddressingMode addressingMode) Implied()
         {
             this.PC += 1;
+#if DEBUG
+            Debugger.Out.PrintImplied();
+#endif
             return (extract: default(ushort), addressingMode: AddressingMode.Implied);
         }
 
-        [Opcode(0x60, 0x29, 0xC9, 0xE0, 0xC0, 0x49, 0xA9, 0xA2, 0xA0, 0x09, 0xE9)]
+        [Opcode(0x29, 0xC9, 0xE0, 0xC0, 0x49, 0xA9, 0xA2, 0xA0, 0x09, 0xE9, 0x69)]
         (ushort extract, AddressingMode addressingMode) Immediate()
         {
             var mv = Memory.Access[(ushort)(this.PC + 1)];
             this.PC += 2;
+#if DEBUG
+            Debugger.Out.PrintImmediate(mv);
+#endif
             return (extract: mv, addressingMode: AddressingMode.Immediate);
         }
 
@@ -746,7 +793,7 @@ namespace Ernest
             {
                 Accumulator, Implied, Immediate, Relative,
                 Absolute, AbsoluteIndexedX, AbsoluteIndexedY,
-                Indirect, IndirectIndexedX, IndirectIndexedY,
+                Indirect, IndexedIndirect, IndirectIndexed,
                 ZeroPage, ZeroPageIndexedX, ZeroPageIndexedY
             };
 
@@ -769,9 +816,6 @@ namespace Ernest
                             if (instructionOpcode == addressingModeOpcode)
                             {
                                 var operation = Bind(i, k);    
-#if DEBUG
-                                Console.WriteLine($"{operation.I.Method.Name} | {operation.AM.Method.Name}");
-#endif
                                 _OpcodesTable[instructionOpcode] = operation;
                             }
                         }
@@ -780,6 +824,8 @@ namespace Ernest
             }
 
             this.SP = 0x1FD;
+            this.S.Set((int)StatusRegisterFlag.I, true);
+            this.S.Set((int)StatusRegisterFlag.U, true);
             this.PC = Memory.Access.MmioReadShort(VECTOR_RST);
         }
 
@@ -788,12 +834,18 @@ namespace Ernest
             while (true)
             {
                 var opcode = Memory.Access[this.PC];
+#if DEBUG
+                Debugger.Out.PC = this.PC;
+                Debugger.Out.A = this.A;
+                Debugger.Out.X = this.X;
+                Debugger.Out.Y = this.Y;
+                Debugger.Out.SP = (byte)this.SP;
+                Debugger.Out.S = this.S.ConvertToByte();
+                Debugger.Out.Opcode = opcode;
+                Debugger.Out.Instruction = this[opcode].I.Method.Name;
+#endif
                 var addressingResult = this[opcode].AM();
                 this[opcode].I(addressingResult);
-#if DEBUG
-                Console.WriteLine($"{this[opcode].I.Method.Name} | {this[opcode].AM.Method.Name}");
-                Console.ReadLine();
-#endif
             }
         }
     }

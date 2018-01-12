@@ -60,6 +60,12 @@ namespace Ernest
             return (ushort)(MmioRead(address) | (MmioRead((ushort)(address + 1)) << 8));
         }
 
+        public ushort MmioWrapReadShort(ushort address)
+        {
+
+            return (ushort)(MmioRead(address) | (MmioRead((ushort)((address + 1) & 0xFF)) << 8));
+        }
+
         private void MmioWrite(uint address, byte value)
         {
             switch (address)

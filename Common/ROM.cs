@@ -66,7 +66,7 @@ namespace Ernest
         {
             using (FileStream fileStream = File.OpenRead(path))
             {
-                if (fileStream.Length < HEADER_SIZE)
+                if (fileStream.Length > HEADER_SIZE)
                 {
                     using (BinaryReader binaryReader = new BinaryReader(fileStream))
                     {
@@ -89,10 +89,7 @@ namespace Ernest
                 }
             }
 
-            port = new Port
-            {
-                Rom = this
-            };
+            port = new Port();
         }
     }
 }
