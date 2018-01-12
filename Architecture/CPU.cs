@@ -692,9 +692,10 @@ namespace Ernest
             byte mv = Memory.Access[(ushort)(this.PC + 1)];
             this.PC += 2;
 
-            var indirectMemoryAddress = (ushort)((Memory.Access.MmioReadShort(mv) + this.Y) & 0xFFFF);
+            var indirectMemoryAddress = Memory.Access.MmioReadShort(mv);
+            var indirectIndexedSum = (ushort)((indirectMemoryAddress + this.Y) & 0xFFFF);
 #if DEBUG
-            Debugger.Out.PrintIndirectIndexed((byte)(mv - this.Y), mv, indirectMemoryAddress, Memory.Access[indirectMemoryAddress]);
+            Debugger.Out.PrintIndirectIndexed(mv, indirectMemoryAddress, indirectIndexedSum, Memory.Access[indirectIndexedSum]);
 #endif
             return (extract: indirectMemoryAddress, addressingMode: AddressingMode.IndirectIndexed);
         }

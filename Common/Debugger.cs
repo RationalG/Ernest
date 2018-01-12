@@ -99,9 +99,9 @@ namespace Ernest.Common
             PrintLogLine(asm);
         }
 
-        public void PrintIndirectIndexed(ushort operand, int sum, ushort indirectMemoryAddress, byte memoryExtract)
+        public void PrintIndirectIndexed(ushort operand, ushort indirectMemoryAddress, int sum, byte memoryExtract)
         {
-            string asm = $"{PC.ToString("X4")} {Opcode.ToString("X2")} {operand.ToString("X2")} {Instruction.ToUpper()} (${operand.ToString("X2")}),Y @ {sum.ToString("X2")} = {indirectMemoryAddress.ToString("X4")} = {memoryExtract.ToString("X2")}";
+            string asm = $"{PC.ToString("X4")} {Opcode.ToString("X2")} {operand.ToString("X2")} {Instruction.ToUpper()} (${operand.ToString("X2")}),Y = {indirectMemoryAddress.ToString("X4")} @ {sum.ToString("X4")} = {memoryExtract.ToString("X2")}";
             PrintLogLine(asm);
         }
 
