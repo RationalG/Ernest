@@ -140,7 +140,8 @@ namespace Ernest
         [Opcode(0x4C, 0x6C)]
         void Jmp((ushort extract, AddressingMode am) addressingResult)
         {
-            this.PC = addressingResult.extract;
+            this.PC = (addressingResult.am == AddressingMode.Indirect) ?
+                Memory.Access.MmioIndirectWrapReadShort(addressingResult.extract) : addressingResult.extract;
         }
 
         [Opcode(0x8A)]
@@ -588,7 +589,6 @@ namespace Ernest
         }
 
         #region Addressing Modes
-
         public enum AddressingMode : int
         {
             ZeroPage,
@@ -621,18 +621,24 @@ namespace Ernest
         (ushort extract, AddressingMode addressingMode) ZeroPageIndexedX()
         {
             var mv = Memory.Access[(ushort)(this.PC + 1)];
-            mv += this.X;
             this.PC += 2;
-            return (extract: mv, addressingMode: AddressingMode.ZeroPageIndexedX);
+            ushort indirectIndexedSum = (ushort)((mv + this.X) & 0xFF);
+#if DEBUG
+            Debugger.Out.PrintZeroPageIndexedX(mv, indirectIndexedSum, Memory.Access[indirectIndexedSum]);
+#endif
+            return (extract: indirectIndexedSum, addressingMode: AddressingMode.ZeroPageIndexedX);
         }
 
         [Opcode(0xB6, 0x96)]
         (ushort extract, AddressingMode addressingMode) ZeroPageIndexedY()
         {
             var mv = Memory.Access[(ushort)(this.PC + 1)];
-            mv += this.Y;
             this.PC += 2;
-            return (extract: mv, addressingMode: AddressingMode.ZeroPageIndexedY);
+            ushort indirectIndexedSum = (ushort)((mv + this.Y) & 0xFF);
+#if DEBUG
+            Debugger.Out.PrintZeroPageIndexedY(mv, indirectIndexedSum, Memory.Access[indirectIndexedSum]);
+#endif
+            return (extract: indirectIndexedSum, addressingMode: AddressingMode.ZeroPageIndexedY);
         }
 
         [Opcode(0x0E, 0x0D, 0x20, 0x2E, 0x2D, 0x2C, 0x4E, 0x4D, 0x4C, 0x6E, 0x6D, 0x8E, 0x8D, 0x8C, 0xAE, 0xAD, 0xAC, 0xCE, 0xCD, 0xCC, 0xEE, 0xED, 0xEC)]
@@ -650,18 +656,24 @@ namespace Ernest
         (ushort extract, AddressingMode addressingMode) AbsoluteIndexedX()
         {
             var mv = Memory.Access.MmioReadShort((ushort)(this.PC + 1));
-            mv += this.X;
             this.PC += 3;
-            return (extract: mv, addressingMode: AddressingMode.AbsoluteIndexedX);
+            ushort indirectIndexedSum = (ushort)((mv + this.X) & 0xFFFF);
+#if DEBUG
+            Debugger.Out.PrintAbsoluteIndexedX(mv, indirectIndexedSum, Memory.Access[indirectIndexedSum]);
+#endif
+            return (extract: indirectIndexedSum, addressingMode: AddressingMode.AbsoluteIndexedX);
         }
 
         [Opcode(0x19, 0x39, 0x59, 0x79, 0x99, 0xB9, 0xBE, 0xD9, 0xF9)]
         (ushort extract, AddressingMode addressingMode) AbsoluteIndexedY()
         {
             var mv = Memory.Access.MmioReadShort((ushort)(this.PC + 1));
-            mv += this.Y;
             this.PC += 3;
-            return (extract: mv, addressingMode: AddressingMode.AbsoluteIndexedY);
+            ushort indirectIndexedSum = (ushort)((mv + this.Y) & 0xFFFF);
+#if DEBUG
+            Debugger.Out.PrintAbsoluteIndexedY(mv, indirectIndexedSum, Memory.Access[indirectIndexedSum]);
+#endif
+            return (extract: indirectIndexedSum, addressingMode: AddressingMode.AbsoluteIndexedY);
         }
 
         [Opcode(0x6C)]
@@ -669,6 +681,10 @@ namespace Ernest
         {
             var mv = Memory.Access.MmioReadShort((ushort)(this.PC + 1));
             this.PC += 3;
+#if DEBUG
+            var indirectMemoryAddress = Memory.Access.MmioIndirectWrapReadShort(mv);
+            Debugger.Out.PrintIndirect(mv, indirectMemoryAddress);
+#endif
             return (extract: mv, addressingMode: AddressingMode.Indirect);
         }
 
@@ -692,12 +708,12 @@ namespace Ernest
             byte mv = Memory.Access[(ushort)(this.PC + 1)];
             this.PC += 2;
 
-            var indirectMemoryAddress = Memory.Access.MmioReadShort(mv);
+            var indirectMemoryAddress = Memory.Access.MmioWrapReadShort(mv);
             var indirectIndexedSum = (ushort)((indirectMemoryAddress + this.Y) & 0xFFFF);
 #if DEBUG
             Debugger.Out.PrintIndirectIndexed(mv, indirectMemoryAddress, indirectIndexedSum, Memory.Access[indirectIndexedSum]);
 #endif
-            return (extract: indirectMemoryAddress, addressingMode: AddressingMode.IndirectIndexed);
+            return (extract: indirectIndexedSum, addressingMode: AddressingMode.IndirectIndexed);
         }
 
         [Opcode(0x10, 0x30, 0x50, 0x70, 0x90, 0xB0, 0xD0, 0xF0)]
@@ -845,8 +861,7 @@ namespace Ernest
                 Debugger.Out.Opcode = opcode;
                 Debugger.Out.Instruction = this[opcode].I.Method.Name;
 #endif
-                var addressingResult = this[opcode].AM();
-                this[opcode].I(addressingResult);
+                this[opcode].I(this[opcode].AM());
             }
         }
     }

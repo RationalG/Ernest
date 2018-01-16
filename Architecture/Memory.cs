@@ -62,8 +62,15 @@ namespace Ernest
 
         public ushort MmioWrapReadShort(ushort address)
         {
-
             return (ushort)(MmioRead(address) | (MmioRead((ushort)((address + 1) & 0xFF)) << 8));
+        }
+
+        public ushort MmioIndirectWrapReadShort(ushort address)
+        {
+            int wrappedLowByte = ((address & 0xFF) + 1) & 0xFF;
+            int highByte = address >> 8;
+            ushort wrappedAddress = (ushort)(wrappedLowByte | highByte << 8);
+            return (ushort)(MmioRead(address) | (MmioRead(wrappedAddress) << 8));
         }
 
         private void MmioWrite(uint address, byte value)
