@@ -77,7 +77,7 @@ namespace Ernest
         {
             switch (address)
             {
-                case uint addr when (addr >= 0 && addr <= 0x1999 || addr >= 0x2003 && addr <= 0x10000):
+                case uint addr when (addr >= 0 && addr <= 0x1999 || addr >= 0x2008 && addr <= 0x10000):
                     _RAM[addr] = value;
                     break;
                 case uint addr when (addr == 0x2000 || addr == 0x2007):

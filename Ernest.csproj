@@ -10,7 +10,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="UI\DirectXWindow.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Samples\" />
+    <Folder Include="UI\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="FNA">
+      <HintPath>..\..\..\Desktop\FNA\bin\Release\FNA.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

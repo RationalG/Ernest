@@ -846,7 +846,7 @@ namespace Ernest
             this.PC = Memory.Access.MmioReadShort(VECTOR_RST);
         }
 
-        public void Update()
+        public int Update()
         {
             while (true)
             {
